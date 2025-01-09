@@ -1,8 +1,9 @@
 import { FastifyTypedIntance } from './types/fastify-types';
 import { z } from 'zod';
 import { userRepository } from './repositories/UserRepository';
-import { hash } from 'bcrypt';
+import { hash, compare } from 'bcrypt';
 import { User } from './entities/User';
+import jwt from 'jsonwebtoken';
 
 export async function routes(app: FastifyTypedIntance): Promise<void> {
   app.post(
@@ -57,6 +58,71 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
           id: savedUser.id,
           name: savedUser.name,
           email: savedUser.email,
+        });
+      } catch (error) {
+        console.error(error);
+        return reply.status(500).send({ message: 'Internal server error' });
+      }
+    }
+  );
+
+  app.post(
+    '/login',
+    {
+      schema: {
+        tags: ['users'],
+        description: 'Login with email and password',
+        body: z.object({
+          email: z.string().email('Invalid email format'),
+          password: z.string().min(6, 'Password must be at least 6 characters'),
+        }),
+        response: {
+          200: z.object({
+            id: z.string(),
+            name: z.string(),
+            email: z.string(),
+            token: z.string(),
+          },
+        ),
+          400: z.object({
+            message: z.string(),
+          }),
+          401: z.object({
+            message: z.string(),
+          }),
+          500: z.object({
+            message: z.string(),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { email, password } = request.body;
+
+      try {
+        const user = await userRepository.findOne({
+          where: { email },
+        });
+
+        if (!user) {
+          return reply.status(401).send({ message: 'Invalid email or password' });
+        }
+
+        const isPasswordValid = await compare(password, user.password);
+
+        if (!isPasswordValid) {
+          return reply.status(401).send({ message: 'Invalid email or password' });
+        }
+
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET ?? "", {
+          expiresIn: "1d",
+        });
+
+        return reply.status(200).send({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          token,
         });
       } catch (error) {
         console.error(error);
