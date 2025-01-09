@@ -1,8 +1,8 @@
 SERVER_PORT = 3030
 
-API_NAME = "Desafio Quero Delivery"
+API_NAME = "User Service"
 API_VERSION = "1.0.0"
-API_PREFIX = "/api/v2"
+API_PREFIX = "/api/v1"
 
 DB_HOST = localhost
 DB_PORT = 5433

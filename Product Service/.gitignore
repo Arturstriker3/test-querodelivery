@@ -1,0 +1,49 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Diretórios do sistema
+.DS_Store
+Thumbs.db
+
+# Dependências
+node_modules/
+
+# Build
+dist/
+build/
+
+# Configurações de ambiente
+# .env
+# .env.local
+# .env.*.local
+
+# Arquivos de saída TypeScript
+*.tsbuildinfo
+*.d.ts
+
+# IDEs e editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testes e relatórios de cobertura
+coverage/
+.nyc_output/
+.vitest/
+.vitest-temp/
+
+# Fastify
+fastify.log
+
+# Lint
+.eslintcache
+
+# Outros arquivos gerados
+*.tgz
+*.lock
