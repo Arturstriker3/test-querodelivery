@@ -1,0 +1,43 @@
+﻿version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: container_user_service_database
+    environment:
+      POSTGRES_DB: generic
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # mongodb:
+  #   image: mongo:latest
+  #   container_name: container_mongodb
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: admin
+  #     MONGO_INITDB_ROOT_PASSWORD: admin
+  #     MONGO_INITDB_DATABASE: generic
+  #   ports:
+  #     - "27018:27017"
+  #   volumes:
+  #     - mongodb_data:/data/db
+  #   restart: on-failure
+  #   healthcheck:
+  #     test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+volumes:
+  postgres_data:
+  # mongodb_data:

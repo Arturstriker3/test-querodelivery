@@ -1,0 +1,48 @@
+{
+  "name": "test-querodelivery",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development tsx watch src/server.ts",
+    "start": "cross-env NODE_ENV=production tsx src/server.ts",
+    "migration:run": "tsx node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@fastify/cors": "^10.0.2",
+    "@fastify/jwt": "^9.0.2",
+    "@fastify/swagger": "^9.4.0",
+    "@fastify/swagger-ui": "^5.2.0",
+    "bcrypt": "^5.1.1",
+    "concurrently": "^9.1.2",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.1",
+    "fastify-cors": "^6.1.0",
+    "fastify-type-provider-zod": "^4.0.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.20",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.10.5",
+    "@typescript-eslint/eslint-plugin": "^8.19.1",
+    "@typescript-eslint/parser": "^8.19.1",
+    "cross-env": "^7.0.3",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "nodemon": "^3.1.9",
+    "prettier": "^3.4.2",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
