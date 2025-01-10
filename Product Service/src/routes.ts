@@ -225,6 +225,10 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
         if (!product) {
           return reply.status(404).send({ message: 'Product not found' });
         }
+  
+        if (product.deletedAt) {
+          return reply.status(400).send({ message: 'Cannot edit a deleted product' });
+        }
     
         product.name = name || product.name;
         product.description = description || product.description;
@@ -280,6 +284,10 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
         if (!product) {
           return reply.status(404).send({ message: 'Product not found' });
         }
+
+        if (product.deletedAt) {
+          return reply.status(400).send({ message: 'Cannot delete a deleted product' });
+        }
   
         product.deletedAt = new Date();
         await product.save();
@@ -302,7 +310,7 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
           uid: z.string().uuid('Invalid product UID format'),
         }),
         body: z.object({
-          amount: z.number().min(1, 'Increment amount must be at least 1'),
+          quantity: z.number().min(1, 'Increment quantity must be at least 1'),
         }),
         response: {
           200: z.object({
@@ -326,18 +334,22 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
     },
     async (request, reply) => {
       const { uid } = request.params;
-      const { amount } = request.body;
-  
+      const { quantity } = request.body;
+    
       try {
         const product = await Product.findOne({ uid });
-  
+    
         if (!product) {
           return reply.status(404).send({ message: 'Product not found' });
         }
   
-        product.quantity += amount;
+        if (product.deletedAt) {
+          return reply.status(400).send({ message: 'Cannot increment quantity of a deleted product' });
+        }
+    
+        product.quantity += quantity;
         await product.save();
-  
+    
         const mappedProduct = {
           id: product.uid,
           name: product.name,
@@ -345,7 +357,7 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
           price: product.price,
           quantity: product.quantity,
         };
-  
+    
         return reply.status(200).send({
           message: 'Product quantity incremented successfully',
           product: mappedProduct,
@@ -367,7 +379,7 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
           uid: z.string().uuid('Invalid product UID format'),
         }),
         body: z.object({
-          amount: z.number().min(1, 'Decrement amount must be at least 1'),
+          quantity: z.number().min(1, 'Decrement quantity must be at least 1'),
         }),
         response: {
           200: z.object({
@@ -391,22 +403,26 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
     },
     async (request, reply) => {
       const { uid } = request.params;
-      const { amount } = request.body;
-  
+      const { quantity } = request.body;
+    
       try {
         const product = await Product.findOne({ uid });
-  
+    
         if (!product) {
           return reply.status(404).send({ message: 'Product not found' });
         }
   
-        if (product.quantity < amount) {
+        if (product.deletedAt) {
+          return reply.status(400).send({ message: 'Cannot decrement quantity of a deleted product' });
+        }
+    
+        if (product.quantity < quantity) {
           return reply.status(400).send({ message: 'Insufficient stock to decrement' });
         }
-  
-        product.quantity -= amount;
+    
+        product.quantity -= quantity;
         await product.save();
-  
+    
         const mappedProduct = {
           id: product.uid,
           name: product.name,
@@ -414,7 +430,7 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
           price: product.price,
           quantity: product.quantity,
         };
-  
+    
         return reply.status(200).send({
           message: 'Product quantity decremented successfully',
           product: mappedProduct,
