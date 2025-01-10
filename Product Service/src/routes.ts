@@ -1,6 +1,6 @@
 import { FastifyTypedIntance } from './types/fastify-types';
 import { z } from 'zod';
-import { Product } from './entities/Product';
+import { Product, IProduct } from './entities/Product';
 import { ObjectId } from 'mongoose';
 
 export async function routes(app: FastifyTypedIntance): Promise<void> {
@@ -65,19 +65,20 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
     {
       schema: {
         tags: ['products'],
-        description: 'Get all products with pagination',
+        description: 'Get all products paginated',
         querystring: z.object({
-          page: z.number().min(1, 'Page must be at least 1').default(1),
-          limit: z.number().min(1, 'Limit must be at least 1').default(10),
+          page: z.coerce.number().int().min(1, 'Page must be a positive integer'),
+          limit: z.coerce.number().int().min(1, 'Limit must be a positive integer'),
         }),
         response: {
           200: z.object({
-            total: z.number(),
             page: z.number(),
             limit: z.number(),
-            products: z.array(
+            total: z.number(),
+            data: z.array(
               z.object({
                 id: z.string(),
+                uid: z.string(),
                 name: z.string(),
                 description: z.string(),
                 price: z.number(),
@@ -95,13 +96,14 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
       const { page, limit } = request.query;
   
       try {
-        const skip = (page - 1) * limit;
-  
-        const total = await Product.countDocuments();
-        const products = await Product.find().skip(skip).limit(limit);
+        const total = await Product.countDocuments({ deletedAt: null });
+        const products = await Product.find({ deletedAt: null })
+          .skip((page - 1) * limit)
+          .limit(limit);
   
         const mappedProducts = products.map((product) => ({
           id: (product._id as ObjectId).toString(),
+          uid: product.uid,
           name: product.name,
           description: product.description,
           price: product.price,
@@ -109,10 +111,10 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
         }));
   
         return reply.status(200).send({
-          total,
           page,
           limit,
-          products: mappedProducts,
+          total,
+          data: mappedProducts,
         });
       } catch (error) {
         console.error(error);
@@ -122,21 +124,25 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
   );
 
   app.get(
-    '/products/:id',
+    '/products/:uid',
     {
       schema: {
         tags: ['products'],
-        description: 'Get a product by ID',
+        description: 'Get a product by UID',
         params: z.object({
-          id: z.string().uuid('Invalid product ID format'),
+          uid: z.string().uuid('Invalid product UID format'),
         }),
         response: {
           200: z.object({
             id: z.string(),
+            uid: z.string(),
             name: z.string(),
             description: z.string(),
             price: z.number(),
             quantity: z.number(),
+            createdAt: z.string(),
+            updatedAt: z.string(),
+            deletedAt: z.string().optional(),
           }),
           404: z.object({
             message: z.string(),
@@ -148,10 +154,10 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
       },
     },
     async (request, reply) => {
-      const { id } = request.params;
+      const { uid } = request.params;
   
       try {
-        const product = await Product.findById(id);
+        const product = await Product.findOne({ uid });
   
         if (!product) {
           return reply.status(404).send({ message: 'Product not found' });
@@ -159,10 +165,14 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
   
         const mappedProduct = {
           id: (product._id as ObjectId).toString(),
+          uid: product.uid,
           name: product.name,
           description: product.description,
           price: product.price,
           quantity: product.quantity,
+          createdAt: product.createdAt.toISOString(),
+          updatedAt: product.updatedAt.toISOString(),
+          deletedAt: product.deletedAt ? product.deletedAt.toISOString() : undefined,
         };
   
         return reply.status(200).send(mappedProduct);
@@ -174,13 +184,13 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
   );
 
   app.put(
-    '/products/:id',
+    '/products/:uid',
     {
       schema: {
         tags: ['products'],
-        description: 'Update a product by ID',
+        description: 'Update a product by UID',
         params: z.object({
-          id: z.string().uuid('Invalid product ID format'),
+          uid: z.string().uuid('Invalid product UID format'),
         }),
         body: z.object({
           name: z.string().min(1, 'Product name is required').optional(),
@@ -206,31 +216,31 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
       },
     },
     async (request, reply) => {
-      const { id } = request.params;
+      const { uid } = request.params;
       const { name, description, price, quantity } = request.body;
-  
+    
       try {
-        const product = await Product.findById(id);
-  
+        const product = await Product.findOne({ uid });
+    
         if (!product) {
           return reply.status(404).send({ message: 'Product not found' });
         }
-  
+    
         product.name = name || product.name;
         product.description = description || product.description;
         product.price = price || product.price;
         product.quantity = quantity || product.quantity;
-  
+    
         const updatedProduct = await product.save();
-  
+    
         const mappedProduct = {
-          id: (updatedProduct._id as ObjectId).toString(),
+          id: updatedProduct.uid,
           name: updatedProduct.name,
           description: updatedProduct.description,
           price: updatedProduct.price,
           quantity: updatedProduct.quantity,
         };
-  
+    
         return reply.status(200).send(mappedProduct);
       } catch (error) {
         console.error(error);
@@ -240,13 +250,13 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
   );
 
   app.delete(
-    '/products/:id',
+    '/products/:uid',
     {
       schema: {
         tags: ['products'],
-        description: 'Soft delete a product by ID',
+        description: 'Soft delete a product by UID',
         params: z.object({
-          id: z.string().uuid('Invalid product ID format'),
+          uid: z.string().uuid('Invalid product UID format'),
         }),
         response: {
           200: z.object({
@@ -262,19 +272,153 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
       },
     },
     async (request, reply) => {
-      const { id } = request.params;
-
+      const { uid } = request.params;
+  
       try {
-        const product = await Product.findById(id);
-
+        const product = await Product.findOne({ uid });
+  
         if (!product) {
           return reply.status(404).send({ message: 'Product not found' });
         }
-
+  
         product.deletedAt = new Date();
         await product.save();
-
+  
         return reply.status(200).send({ message: 'Product soft deleted successfully' });
+      } catch (error) {
+        console.error(error);
+        return reply.status(500).send({ message: 'Internal server error' });
+      }
+    }
+  );
+
+  app.patch(
+    '/products/:uid/increment',
+    {
+      schema: {
+        tags: ['products'],
+        description: 'Increment the quantity of a product by UID',
+        params: z.object({
+          uid: z.string().uuid('Invalid product UID format'),
+        }),
+        body: z.object({
+          amount: z.number().min(1, 'Increment amount must be at least 1'),
+        }),
+        response: {
+          200: z.object({
+            message: z.string(),
+            product: z.object({
+              id: z.string(),
+              name: z.string(),
+              description: z.string(),
+              price: z.number(),
+              quantity: z.number(),
+            }),
+          }),
+          404: z.object({
+            message: z.string(),
+          }),
+          500: z.object({
+            message: z.string(),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { uid } = request.params;
+      const { amount } = request.body;
+  
+      try {
+        const product = await Product.findOne({ uid });
+  
+        if (!product) {
+          return reply.status(404).send({ message: 'Product not found' });
+        }
+  
+        product.quantity += amount;
+        await product.save();
+  
+        const mappedProduct = {
+          id: product.uid,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          quantity: product.quantity,
+        };
+  
+        return reply.status(200).send({
+          message: 'Product quantity incremented successfully',
+          product: mappedProduct,
+        });
+      } catch (error) {
+        console.error(error);
+        return reply.status(500).send({ message: 'Internal server error' });
+      }
+    }
+  );
+
+  app.patch(
+    '/products/:uid/decrement',
+    {
+      schema: {
+        tags: ['products'],
+        description: 'Decrement the quantity of a product by UID',
+        params: z.object({
+          uid: z.string().uuid('Invalid product UID format'),
+        }),
+        body: z.object({
+          amount: z.number().min(1, 'Decrement amount must be at least 1'),
+        }),
+        response: {
+          200: z.object({
+            message: z.string(),
+            product: z.object({
+              id: z.string(),
+              name: z.string(),
+              description: z.string(),
+              price: z.number(),
+              quantity: z.number(),
+            }),
+          }),
+          404: z.object({
+            message: z.string(),
+          }),
+          500: z.object({
+            message: z.string(),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { uid } = request.params;
+      const { amount } = request.body;
+  
+      try {
+        const product = await Product.findOne({ uid });
+  
+        if (!product) {
+          return reply.status(404).send({ message: 'Product not found' });
+        }
+  
+        if (product.quantity < amount) {
+          return reply.status(400).send({ message: 'Insufficient stock to decrement' });
+        }
+  
+        product.quantity -= amount;
+        await product.save();
+  
+        const mappedProduct = {
+          id: product.uid,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          quantity: product.quantity,
+        };
+  
+        return reply.status(200).send({
+          message: 'Product quantity decremented successfully',
+          product: mappedProduct,
+        });
       } catch (error) {
         console.error(error);
         return reply.status(500).send({ message: 'Internal server error' });
