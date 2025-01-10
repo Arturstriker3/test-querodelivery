@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { fastify } from 'fastify';
 import { fastifyCors } from '@fastify/cors';
 import { validatorCompiler, serializerCompiler, ZodTypeProvider, jsonSchemaTransform } from 'fastify-type-provider-zod';
@@ -7,12 +6,12 @@ import rootRoute from './helpers/rootRoute';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { routes } from './routes';
-import { AppDataSource } from './database/data-source';
+import mongoose from 'mongoose';
 
 const app = fastify().withTypeProvider<ZodTypeProvider>();
 app.setValidatorCompiler(validatorCompiler);
 app.setSerializerCompiler(serializerCompiler);
-app.register(fastifyCors, { origin: "*"});
+app.register(fastifyCors, { origin: "*" });
 app.register(rootRoute);
 
 app.register(fastifySwagger, {
@@ -33,8 +32,8 @@ app.register(routes);
 
 const startServer = async () => {
   try {
-    await AppDataSource.initialize();
-    console.log("Database connected successfully!");
+    await mongoose.connect(envConfig.getMongoUri());
+    console.log('Connected to MongoDB');
 
     app.listen({ port: Number(envConfig.getPort()) }, (err, address) => {
       if (err) {
@@ -47,7 +46,7 @@ const startServer = async () => {
       console.log(`API Documentation available at ${docsUrl}`);
     });
   } catch (error) {
-    console.error("Error connecting to the database:", error);
+    console.error('Error connecting to MongoDB:', error);
     process.exit(1);
   }
 };
