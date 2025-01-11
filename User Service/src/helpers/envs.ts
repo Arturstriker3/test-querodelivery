@@ -7,6 +7,7 @@ interface IEnvConfig {
   getServerName(): string;
   getServerVersion(): string;
   getServerJwtSecret(): string;
+  getProductServiceUrl(): string;
 }
 
 class EnvConfig implements IEnvConfig {
@@ -36,6 +37,13 @@ class EnvConfig implements IEnvConfig {
       console.error("JWT_SECRET is not defined in the environment variables");
     }
     return process.env.JWT_SECRET || "";
+  }
+
+  public getProductServiceUrl(): string {
+    if(!process.env.PRODUCT_SERVICE_URL) {
+      console.error("PRODUCT_SERVICE_URL is not defined in the environment variables");
+    }
+    return process.env.PRODUCT_SERVICE_URL || "";
   }
 }
 

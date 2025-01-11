@@ -17,6 +17,7 @@
     "@fastify/jwt": "^9.0.2",
     "@fastify/swagger": "^9.4.0",
     "@fastify/swagger-ui": "^5.2.0",
+    "axios": "^1.7.9",
     "bcrypt": "^5.1.1",
     "concurrently": "^9.1.2",
     "dotenv": "^16.4.7",

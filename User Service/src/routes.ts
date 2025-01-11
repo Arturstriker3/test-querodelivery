@@ -4,14 +4,17 @@ import { userRepository } from './repositories/UserRepository';
 import { hash, compare } from 'bcrypt';
 import { User } from './entities/User';
 import jwt from 'jsonwebtoken';
-import { JwtPayload } from 'jsonwebtoken';
+import { envConfig } from './helpers/envs';
+import axios from 'axios';
 
 export async function routes(app: FastifyTypedIntance): Promise<void> {
+  const productServiceUrl = envConfig.getProductServiceUrl();
+
   app.post(
     '/register',
     {
       schema: {
-        tags: ['authtentication'],
+        tags: ['authentication'],
         description: 'Create a new user',
         body: z.object({
           name: z.string().min(1, 'Name is required'),
@@ -23,6 +26,20 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
             uid: z.string(),
             name: z.string(),
             email: z.string(),
+            cart: z.object({
+              id: z.string(),
+              uid: z.string(),
+              owner: z.string(),
+              products: z.array(
+                z.object({
+                  productId: z.string(),
+                  name: z.string(),
+                  price: z.number(),
+                  quantity: z.number(),
+                })
+              ),
+              totalPrice: z.number(),
+            }),
           }),
           400: z.object({
             message: z.string(),
@@ -37,11 +54,7 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
       const { name, email, password } = request.body;
 
       try {
-
-        const existingUser = await userRepository.findOne({
-          where: { email },
-        });
-
+        const existingUser = await userRepository.findOne({ where: { email } });
         if (existingUser) {
           return reply.status(400).send({ message: 'Email is already in use' });
         }
@@ -55,13 +68,39 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
 
         const savedUser = await userRepository.save(newUser);
 
+        const cartToken = jwt.sign({ id: savedUser.id }, process.env.JWT_SECRET ?? '', {
+          expiresIn: '5m',
+        });
+
+        const cartResponse = await axios.post(
+          `${productServiceUrl}/carts/${savedUser.id}`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${cartToken}`,
+            },
+          }
+        );
+
+        if (cartResponse.status !== 201) {
+          return reply.status(500).send({ message: 'Error creating cart' });
+        }
+
         return reply.status(201).send({
           uid: savedUser.id,
           name: savedUser.name,
           email: savedUser.email,
+          cart: cartResponse.data.cart,
         });
       } catch (error) {
         console.error(error);
+
+        if (axios.isAxiosError(error) && error.response) {
+          return reply.status(error.response.status).send({
+            message: error.response.data.message || 'Error communicating with cart service',
+          });
+        }
+
         return reply.status(500).send({ message: 'Internal server error' });
       }
     }
@@ -71,7 +110,7 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
     '/login',
     {
       schema: {
-        tags: ['authtentication'],
+        tags: ['authentication'],
         description: 'Login with email and password',
         body: z.object({
           email: z.string().email('Invalid email format'),
