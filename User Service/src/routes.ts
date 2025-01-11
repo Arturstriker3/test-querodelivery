@@ -19,7 +19,7 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
         }),
         response: {
           201: z.object({
-            id: z.string(),
+            uid: z.string(),
             name: z.string(),
             email: z.string(),
           }),
@@ -55,7 +55,7 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
         const savedUser = await userRepository.save(newUser);
 
         return reply.status(201).send({
-          id: savedUser.id,
+          uid: savedUser.id,
           name: savedUser.name,
           email: savedUser.email,
         });
@@ -78,7 +78,7 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
         }),
         response: {
           200: z.object({
-            id: z.string(),
+            uid: z.string(),
             name: z.string(),
             email: z.string(),
             token: z.string(),
@@ -119,7 +119,7 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
         });
 
         return reply.status(200).send({
-          id: user.id,
+          uid: user.id,
           name: user.name,
           email: user.email,
           token,
