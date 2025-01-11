@@ -197,4 +197,70 @@ export async function purchaseRoutes(app: FastifyTypedIntance): Promise<void> {
       }
     }
   );
+
+  app.get(
+    '/purchase/:uid',
+    {
+      schema: {
+        tags: ['purchases'],
+        description: 'Get details of a specific purchase by its UID',
+        params: z.object({
+          uid: z.string().uuid('Invalid purchase UID format'),
+        }),
+        response: {
+          200: z.object({
+            id: z.string(),
+            owner: z.string(),
+            products: z.array(
+              z.object({
+                productId: z.string(),
+                name: z.string(),
+                price: z.number(),
+                quantity: z.number(),
+                totalPrice: z.number(),
+              })
+            ),
+            totalAmount: z.number(),
+            createdAt: z.string(),
+          }),
+          404: z.object({
+            message: z.string(),
+          }),
+          500: z.object({
+            message: z.string(),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { uid } = request.params;
+  
+      try {
+        const purchase = await Purchase.findOne({ uid });
+  
+        if (!purchase) {
+          return reply.status(404).send({ message: 'Purchase not found' });
+        }
+  
+        const mappedPurchase = {
+          id: (purchase._id as any).toString(),
+          owner: purchase.owner,
+          products: purchase.products.map((product) => ({
+            productId: product.productId,
+            name: product.name,
+            price: product.price,
+            quantity: product.quantity,
+            totalPrice: product.price * product.quantity,
+          })),
+          totalAmount: purchase.totalAmount,
+          createdAt: purchase.createdAt.toISOString(),
+        };
+  
+        return reply.status(200).send(mappedPurchase);
+      } catch (error) {
+        console.error(error);
+        return reply.status(500).send({ message: 'Internal server error' });
+      }
+    }
+  );
 }
