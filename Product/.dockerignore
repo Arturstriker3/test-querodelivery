@@ -1,0 +1,19 @@
+# Ignore node_modules (installed in container)
+node_modules
+
+# Ignore environment files (for security; pass via Docker Compose)
+.env
+
+# Ignore logs and other unnecessary files
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore build artifacts and IDE/project files
+dist
+.vscode
+.idea
+.DS_Store
+*.swp

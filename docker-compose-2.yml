@@ -3,7 +3,7 @@
 services:
   postgres:
     image: postgres:17
-    container_name: container_postgres_database
+    container_name: container_user_service_database
     environment:
       POSTGRES_DB: generic
       POSTGRES_USER: admin
@@ -33,29 +33,10 @@ services:
       - mongodb_data:/data/db
     restart: on-failure
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  api-product:
-    build:
-      context: ./Product
-      dockerfile: ./Dockerfile
-    container_name: api_product_service
-    environment:
-      - MONGO_URL=mongodb://admin:admin@container_mongo_database:27017/generic?authSource=admin
-      - SERVER_PORT=4040
-      - API_NAME="Product/Cart/Purchase Service"
-      - API_VERSION="1.0.0"
-      - API_PREFIX="/api/v1"
-      - JWT_SECRET="1234567890123456789012345678querodelivery"
-    ports:
-      - "4040:4040"
-    depends_on:
-      mongodb:
-        condition: service_healthy
-    restart: on-failure
 
 volumes:
   postgres_data_user:

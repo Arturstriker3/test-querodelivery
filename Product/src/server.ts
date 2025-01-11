@@ -78,7 +78,10 @@ const startServer = async () => {
     await mongoose.connect(envConfig.getMongoUri());
     console.log('Connected to MongoDB');
 
-    app.listen({ port: Number(envConfig.getPort()) }, (err, address) => {
+    app.listen({ 
+      port: Number(envConfig.getPort()), 
+      host: '0.0.0.0'
+    }, (err, address) => {
       if (err) {
         console.error(err);
         process.exit(1);

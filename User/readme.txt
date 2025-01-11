@@ -9,3 +9,6 @@ DB_PORT = 5433
 DB_USERNAME = admin
 DB_PASSWORD = admin
 DB_DATABASE = generic
+
+docker build -t testquerodelivery:latest .
+docker run -d -p 3030:3030 --name product-service testquerodelivery:latest

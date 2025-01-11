@@ -33,7 +33,7 @@ class EnvConfig implements IEnvConfig {
   }
 
   public getMongoUri(): string {
-    const defaultMongoUri = "mongodb://admin:admin@localhost:27018/generic?authSource=admin";
+    const defaultMongoUri = "mongodb://admin:admin@container_mongo_database:27017/generic?authSource=admin";
     const mongoUri = process.env.MONGO_URI || defaultMongoUri;
     return mongoUri;
   }
