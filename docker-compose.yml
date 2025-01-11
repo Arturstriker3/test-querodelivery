@@ -12,7 +12,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres_data_user:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     restart: on-failure
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "admin"]
@@ -44,12 +44,13 @@ services:
       dockerfile: ./Dockerfile
     container_name: api_product_service
     environment:
-      - MONGO_URL=mongodb://admin:admin@container_mongo_database:27017/generic?authSource=admin
-      - SERVER_PORT=4040
-      - API_NAME="Product/Cart/Purchase Service"
-      - API_VERSION="1.0.0"
-      - API_PREFIX="/api/v1"
-      - JWT_SECRET="1234567890123456789012345678querodelivery"
+      MONGO_URL: mongodb://admin:admin@container_mongo_database:27017/generic?authSource=admin
+      SERVER_PORT: 4040
+      API_NAME: "Product/Cart/Purchase Service"
+      API_VERSION: "1.0.0"
+      API_PREFIX: "/api/v1"
+      JWT_SECRET: "1234567890123456789012345678querodelivery"
+      NODE_ENV: production
     ports:
       - "4040:4040"
     depends_on:
@@ -57,6 +58,31 @@ services:
         condition: service_healthy
     restart: on-failure
 
+  api-user:
+    build:
+      context: ./User
+      dockerfile: ./Dockerfile
+    container_name: api_user_service
+    environment:
+      SERVER_PORT: 3030
+      API_NAME: "User Service"
+      API_VERSION: "1.0.0"
+      API_PREFIX: "/api/v1"
+      DB_HOST: container_postgres_database
+      DB_PORT: 5432
+      DB_USERNAME: admin
+      DB_PASSWORD: admin
+      DB_DATABASE: generic
+      JWT_SECRET: "1234567890123456789012345678querodelivery"
+      PRODUCT_SERVICE_URL: "http://api_product_service:4040"
+      NODE_ENV: production
+    ports:
+      - "3030:3030"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
 volumes:
-  postgres_data_user:
+  postgres_data:
   mongodb_data:
