@@ -7,6 +7,7 @@ interface IEnvConfig {
   getServerName(): string;
   getServerVersion(): string;
   getMongoUri(): string;
+  getServerJwtSecret(): string;
 }
 
 class EnvConfig implements IEnvConfig {
@@ -35,6 +36,13 @@ class EnvConfig implements IEnvConfig {
     const defaultMongoUri = "mongodb://admin:admin@localhost:27018/generic?authSource=admin";
     const mongoUri = process.env.MONGO_URI || defaultMongoUri;
     return mongoUri;
+  }
+
+  public getServerJwtSecret(): string {
+    if(!process.env.JWT_SECRET) {
+      console.error("JWT_SECRET is not defined in the environment variables");
+    }
+    return process.env.JWT_SECRET || "";
   }
 }
 

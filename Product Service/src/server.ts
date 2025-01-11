@@ -7,6 +7,8 @@ import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { routes } from './routes';
 import mongoose from 'mongoose';
+import fastifyJwt from '@fastify/jwt';
+import { FastifyRequest, FastifyReply } from 'fastify';
 
 const app = fastify().withTypeProvider<ZodTypeProvider>();
 app.setValidatorCompiler(validatorCompiler);
@@ -20,12 +22,53 @@ app.register(fastifySwagger, {
       title: `${envConfig.getServerName()} - API Documentation`,
       version: `${envConfig.getServerVersion()}`,
     },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
   },
   transform: jsonSchemaTransform,
 });
 
 app.register(fastifySwaggerUi, {
   routePrefix: `/docs`,
+});
+
+const jwtSecret = envConfig.getServerJwtSecret();
+app.register(fastifyJwt, {
+  secret: jwtSecret,
+});
+
+app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    const authHeader = request.headers['authorization'];
+
+    if (!authHeader) {
+      return reply.status(401).send({ message: 'Authorization header is missing' });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    if (!token) {
+      return reply.status(401).send({ message: 'Token is missing' });
+    }
+
+    await request.jwtVerify();
+
+  } catch (error) {
+    console.error(error);
+    return reply.status(401).send({ message: 'Invalid or expired token' });
+  }
 });
 
 app.register(routes);

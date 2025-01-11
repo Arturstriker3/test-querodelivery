@@ -22,6 +22,7 @@
     "dotenv": "^16.4.7",
     "fastify": "^5.2.1",
     "fastify-cors": "^6.1.0",
+    "fastify-jwt": "^4.2.0",
     "fastify-type-provider-zod": "^4.0.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.4",
