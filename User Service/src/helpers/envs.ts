@@ -6,6 +6,7 @@ interface IEnvConfig {
   getPort(): number;
   getServerName(): string;
   getServerVersion(): string;
+  getServerJwtSecret(): string;
 }
 
 class EnvConfig implements IEnvConfig {
@@ -28,6 +29,13 @@ class EnvConfig implements IEnvConfig {
   public getApiPrefix(): string {
     const defaultApiPrefix = "/api/v1";
     return process.env.API_PREFIX || defaultApiPrefix;
+  }
+
+  public getServerJwtSecret(): string {
+    if(!process.env.JWT_SECRET) {
+      console.error("JWT_SECRET is not defined in the environment variables");
+    }
+    return process.env.JWT_SECRET || "";
   }
 }
 

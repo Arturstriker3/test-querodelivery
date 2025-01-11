@@ -4,13 +4,14 @@ import { userRepository } from './repositories/UserRepository';
 import { hash, compare } from 'bcrypt';
 import { User } from './entities/User';
 import jwt from 'jsonwebtoken';
+import { JwtPayload } from 'jsonwebtoken';
 
 export async function routes(app: FastifyTypedIntance): Promise<void> {
   app.post(
     '/register',
     {
       schema: {
-        tags: ['users'],
+        tags: ['authtentication'],
         description: 'Create a new user',
         body: z.object({
           name: z.string().min(1, 'Name is required'),
@@ -70,7 +71,7 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
     '/login',
     {
       schema: {
-        tags: ['users'],
+        tags: ['authtentication'],
         description: 'Login with email and password',
         body: z.object({
           email: z.string().email('Invalid email format'),
@@ -124,6 +125,57 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
           email: user.email,
           token,
         });
+      } catch (error) {
+        console.error(error);
+        return reply.status(500).send({ message: 'Internal server error' });
+      }
+    }
+  );
+
+  app.get(
+    '/users/:userUid',
+    {
+      preValidation: [app.authenticate],
+      schema: {
+        tags: ['users'],
+        description: 'Get user details by userUid',
+        params: z.object({
+          userUid: z.string(),
+        }),
+        response: {
+          200: z.object({
+            uid: z.string(),
+            name: z.string(),
+            email: z.string(),
+          }),
+          400: z.object({
+            message: z.string(),
+          }),
+          404: z.object({
+            message: z.string(),
+          }),
+          500: z.object({
+            message: z.string(),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { userUid } = request.params;
+  
+      try {
+        const user = await userRepository.findOne({
+          where: { id: userUid },
+        });
+  
+        if (!user) {
+          return reply.status(404).send({ message: 'User not found' });
+        }
+  
+        const { password, ...userData } = user;
+        const response = { uid: user.id, ...userData };
+  
+        return reply.status(200).send(response);
       } catch (error) {
         console.error(error);
         return reply.status(500).send({ message: 'Internal server error' });
