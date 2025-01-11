@@ -841,5 +841,95 @@ export async function routes(app: FastifyTypedIntance): Promise<void> {
     }
   );
 
-
+  app.delete(
+    '/carts/user/:userUid/products/:productId',
+    {
+      schema: {
+        tags: ['carts'],
+        description: 'Remove a product from the cart by userUid and productId',
+        params: z.object({
+          userUid: z.string(),
+          productId: z.string(),
+        }),
+        response: {
+          200: z.object({
+            message: z.string(),
+            cart: z.object({
+              id: z.string(),
+              uid: z.string(),
+              owner: z.string(),
+              products: z.array(
+                z.object({
+                  productId: z.string(),
+                  name: z.string(),
+                  price: z.number(),
+                  quantity: z.number(),
+                })
+              ),
+              totalPrice: z.number(),
+            }),
+          }),
+          404: z.object({
+            message: z.string(),
+          }),
+          500: z.object({
+            message: z.string(),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { userUid, productId } = request.params;
+  
+      try {
+        const cart = await Cart.findOne({ owner: userUid });
+  
+        if (!cart) {
+          return reply.status(404).send({ message: 'Cart not found for this user cart' });
+        }
+  
+        const productIndex = cart.products.findIndex(
+          (product) => product.productId.toString() === productId
+        );
+  
+        if (productIndex === -1) {
+          return reply.status(404).send({ message: 'Product not found in this user cart' });
+        }
+  
+        const product = cart.products[productIndex];
+  
+        if (product.quantity > 1) {
+          product.quantity -= 1;
+        } else {
+          cart.products.splice(productIndex, 1);
+        }
+  
+        cart.totalPrice = cart.products.reduce(
+          (total, product) => total + product.price * product.quantity,
+          0
+        );
+  
+        await cart.save();
+  
+        return reply.status(200).send({
+          message: 'Product removed successfully',
+          cart: {
+            id: cart._id.toString(),
+            uid: cart.uid,
+            owner: cart.owner,
+            products: cart.products.map((product) => ({
+              productId: product.productId.toString(),
+              name: product.name,
+              price: product.price,
+              quantity: product.quantity,
+            })),
+            totalPrice: cart.totalPrice,
+          },
+        });
+      } catch (error) {
+        console.error(error);
+        return reply.status(500).send({ message: 'Internal server error' });
+      }
+    }
+  );
 }
